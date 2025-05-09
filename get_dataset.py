@@ -16,8 +16,9 @@ for website in test_websites:
    url_dir = os.path.join(DATASETS_FOLDER,url_description['url'])
    if not os.path.exists(url_dir): os.makedirs(url_dir)
    # 3. Записываем информацию о новостях в .txt
-   # 4. Извелекаем html страницы новостей
-   # 5.
+   # 4. Извелекаем html страницы новостей в папку html-raw
+   # 5. Создаем папку gold-standard
+   # 6. Создаем и заполняем папку extracted_texts содержимыми новостей
 
 # print(urls)
 
