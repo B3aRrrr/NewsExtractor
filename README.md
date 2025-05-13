@@ -33,7 +33,7 @@
 ```bash
 NewsExtractor/
 │
-├── main.py                 # 💡 Основной скрипт запуска [добавь ссылку после загрузки]
+├── main.py                 # 💡 Основной скрипт запуска 
 ├── config.py               # 📥 Конфигурационные параметры проекты (пути к данным, параметры User-Agent, параметры модели)
 ├── utils/                  # 🧰 Вспомогательные функции
 │   ├── __init__.py
@@ -55,8 +55,8 @@ NewsExtractor/
 1.  Клонируй репозиторий:
 
 ```bash
-git clone https://github.com/yourusername/article-extraction-evaluator.git
-cd article-extraction-evaluator
+git clone https://github.com/B3aRrrr/NewsExtractor.git
+cd NewsExtractor
 ```
 
 2. Установи зависимости:
@@ -80,10 +80,10 @@ py main.py --excel_data_path path/to/input_file.xlsx
 ## 📊 Пример результата
 
 Исходный файл:
-![screenshot](data\Test_check.png)
+![screenshot](https://github.com/B3aRrrr/NewsExtractor/blob/main/data/Test_check.png)
 
 Результат:
-![screenshot](data\Test_check_output.png)
+![screenshot](https://github.com/B3aRrrr/NewsExtractor/blob/main/data/Test_check_output.png)
 
 --- 
 
@@ -151,7 +151,7 @@ $$
 ## 🔧 Возможные улучшения
 
 * Web-интерфейс
-* Использование методов извлечение основанных [ScrapeGraphAI](https://github.com/ScrapeGraphAI/Scrapegraph-ai) (метод основанный на использовании данного способа [реализован](utils\scrapegraphai_functions.py), но не был испытан за неименеием технических возможностей)
+* Использование методов извлечение основанных [ScrapeGraphAI](https://github.com/ScrapeGraphAI/Scrapegraph-ai) (метод основанный на использовании данного способа [реализован](https://github.com/B3aRrrr/NewsExtractor/blob/main/utils/scrapegraphai_functions.py), но не был испытан за неименеием технических возможностей)
 
 ---
 
