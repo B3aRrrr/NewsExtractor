@@ -1,6 +1,10 @@
 import os
 import requests
 from urllib.parse import urlparse, unquote
+from tkinter import filedialog as fd
+from tkinter import Tk
+from scrapegraphai.graphs import SmartScraperGraph
+import json
 
 def URL2HTML(url: str, output_path: str = os.getcwd(), name: str = 'test') -> None:
     """
@@ -55,3 +59,27 @@ def get_title_from_url(url: str) -> str:
     title = unquote(title)
     return title
 
+def select_file() -> str:
+    """Открывает диалоговое окно для выбора файла Excel и возвращает его путь."""
+    root = Tk()
+    root.withdraw()  # Скрыть главное окно
+    file_path = fd.askopenfilename(
+        title="Выберите Excel файл",
+        filetypes=[("Excel files", "*.xls;*.xlsx")])
+    root.destroy()  # Закрыть главное окно
+    return file_path
+
+def get_JSON_FROM_URL(
+        graph_config:dict,
+        promt:str="Extract full news content",
+        source:str="https://ria.ru/20250512/dnr-2016505307.html") -> dict:
+    # Create the SmartScraperGraph instance
+    smart_scraper_graph = SmartScraperGraph(
+        prompt=promt,
+        source=source,
+        config=graph_config
+    )
+
+    # Run the pipeline
+    result = smart_scraper_graph.run()
+    return json.dumps(result, indent=4)
