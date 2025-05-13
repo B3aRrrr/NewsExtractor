@@ -1,63 +1,115 @@
-import os
 import requests
-from urllib.parse import urlparse, unquote
 from tkinter import filedialog as fd
-from tkinter import Tk
-from scrapegraphai.graphs import SmartScraperGraph
-import json
+from tkinter import Tk 
+import trafilatura
+from langdetect import detect
+from difflib import SequenceMatcher
 
-def URL2HTML(url: str, output_path: str = os.getcwd(), name: str = 'test') -> None:
-    """
-    Загружает HTML страницы по URL с помощью requests и сохраняет в файл.
+import nltk
+nltk.download('punkt')
+nltk.download('punkt_ru')
+nltk.download('punkt_tab')
 
-    Args:
-        url (str): URL страницы.
-        output_path (str): Путь к папке для сохранения.
-        name (str, optional): Имя файла без расширения. По умолчанию 'test'.
+from nltk.tokenize import sent_tokenize
+
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+
+model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+
+def is_similar(sent1, sent2, threshold=0.8):
     """
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                      'AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/114.0.0.0 Safari/537.36'
+    Проверяет, являются ли два предложения похожими на основе коэффициента сходства.
+
+    :param sent1: Первое предложение для сравнения.
+    :param sent2: Второе предложение для сравнения.
+    :param threshold: Пороговое значение коэффициента сходства (от 0 до 1), выше которого предложения считаются похожими.
+    :return: True, если коэффициент сходства >= threshold, иначе False.
+    """
+    return SequenceMatcher(None, sent1, sent2).ratio() >= threshold
+
+def evaluate_extraction(reference_text:str, extracted_text:str, similarity_threshold:float=0.8) -> dict:
+    """
+    Оценивает полноту извлечения текста, сравнивая извлечённый текст с эталонным.
+
+    :param reference_text: Эталонный текст (полный текст новости).
+    :param extracted_text: Извлечённый текст, полученный из парсера/скрапинга.
+    :param similarity_threshold: Порог коэффициента сходства предложений для их сопоставления.
+    :return: Словарь с результатами оценки:
+             - "recall": доля совпадающих предложений из эталона (0–1),
+             - "missing_sentences": список пропущенных (не найденных) предложений,
+             - "matched_count": количество совпадающих предложений,
+             - "total_reference": общее количество предложений в эталонном тексте.
+    """
+    language = detect(reference_text)  # Определяем язык
+    if language == 'ru':
+        language= 'russian'
+    reference_sentences = sent_tokenize(reference_text, language=language)
+    extracted_sentences = sent_tokenize(extracted_text, language=language)
+
+    matched = []
+    missing = []
+
+    for ref_sent in reference_sentences:
+        if any(is_similar(ref_sent, ext_sent, similarity_threshold) for ext_sent in extracted_sentences):
+            matched.append(ref_sent)
+        else:
+            missing.append(ref_sent)
+
+    recall = len(matched) / len(reference_sentences) if reference_sentences else 0.0
+
+    return {
+        "recall": round(recall, 3),
+        "missing_sentences": missing,
+        "matched_count": len(matched),
+        "total_reference": len(reference_sentences)
     }
 
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f'[URL2HTML] Ошибка при запросе URL {url}: {e}')
-        return
-
-    os.makedirs(output_path, exist_ok=True)
-    file_path = os.path.join(output_path, f'{name}.html')
-
-    try:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(response.text)
-        print(f'[URL2HTML] HTML сохранён в {file_path}')
-    except IOError as e:
-        print(f'[URL2HTML] Ошибка при записи файла {file_path}: {e}')
-
-def get_title_from_url(url: str) -> str:
+def extract_article(url:str, headers:dict) -> str:
     """
-        Загружаем URL страницы и возвращаем её краткое ID-название
+        Функция извлечения текста статьи из URL-ссылки
 
     Args:
-        url (str): URL страницы.
+        url (str): URL новостной статьи
+        headers (dict): User-Agent для запросов к браузеру
 
     Returns:
-        str: Краткое ID-название
+        str: Текст эталонной новости
     """
-    parsed_url = urlparse(url)
-    path = parsed_url.path  # Например: /2025/05/12/business/china-us-tariffs.html
-    # Разбиваем путь на части
-    parts = path.rstrip('/').split('/')
-    filename = parts[-1]  # Например: 'china-us-tariffs.html'
-    # Удаляем расширение
-    title = os.path.splitext(filename)[0]
-    # Можно дополнительно декодировать URL
-    title = unquote(title)
-    return title
+    try:
+        # Загружаем HTML страницы с указанными заголовками
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        # Извлекаем контент с помощью trafilatura
+        downloaded = trafilatura.fetch_url(url)
+        if downloaded:
+            # Парсим страницу, чтобы извлечь только основной текст статьи
+            article = trafilatura.extract(downloaded)
+
+            # Если статья не была найдена, вернем пустой результат
+            if article:
+                # Получаем мета-данные, включая заголовок
+                metadata = trafilatura.extract_metadata(downloaded)
+                title = metadata.title if metadata and hasattr(metadata, 'title') else 'Без заголовка'
+
+                # Определяем язык текста
+                language = detect(article)
+                return {
+                    'title': title,
+                    'text': article,
+                    'language': language
+                }
+            else:
+                print("[!] Текст не был извлечён")
+                return None
+        else:
+            print("[!] Не удалось загрузить страницу")
+            return None
+
+    except requests.exceptions.RequestException as e:
+        print(f"[!] Ошибка при запросе страницы: {e}")
+        return None
 
 def select_file() -> str:
     """Открывает диалоговое окно для выбора файла Excel и возвращает его путь."""
@@ -69,17 +121,74 @@ def select_file() -> str:
     root.destroy()  # Закрыть главное окно
     return file_path
 
-def get_JSON_FROM_URL(
-        graph_config:dict,
-        promt:str="Extract full news content",
-        source:str="https://ria.ru/20250512/dnr-2016505307.html") -> dict:
-    # Create the SmartScraperGraph instance
-    smart_scraper_graph = SmartScraperGraph(
-        prompt=promt,
-        source=source,
-        config=graph_config
-    )
+def get_embedding(text:str):
+    """
+    Получает эмбеддинг для заданного текста с помощью модели SentenceTransformer.
 
-    # Run the pipeline
-    result = smart_scraper_graph.run()
-    return json.dumps(result, indent=4)
+    :param text: Текст для кодирования.
+    :return: Вектор-эмбеддинг (numpy-массив) длины 384.
+    """
+    return model.encode([text])[0]
+
+def semantic_similarity(text1, text2):
+    """
+    Вычисляет косинусное сходство между двумя текстами на основе эмбеддингов.
+
+    :param text1: Первый текст.
+    :param text2: Второй текст.
+    :return: Значение косинусного сходства от 0 до 1, где 1 — полная семантическая идентичность.
+    """
+    return cosine_similarity([get_embedding(text1)], [get_embedding(text2)])[0][0]
+
+def evaluate_significance(reference_text: str, extracted_text: str, threshold: float = 0.8):
+    """
+    Оценивает семантическую значимость пропущенных фрагментов статьи по сравнению с эталоном.
+
+    Для каждого пропущенного предложения вычисляется его вклад в повышение семантического сходства
+    между извлечённым и эталонным текстом.
+
+    :param reference_text: Полный текст статьи (эталон).
+    :param extracted_text: Извлечённый скрапером текст.
+    :param threshold: Порог (не используется напрямую в текущей реализации, зарезервирован для расширения).
+    :return: Словарь с результатами:
+             - "semantic_similarity": косинусное сходство между извлечённым и эталонным текстом,
+             - "missing_fragments": список словарей с пропущенными предложениями и их вкладом в семантику ("semantic_gain").
+               Сортированы по убыванию вклада.
+    """
+    language = detect(reference_text)
+    if language == 'ru':
+        language= 'russian'
+    ref_sentences = sent_tokenize(reference_text, language=language)
+    ext_sentences = sent_tokenize(extracted_text, language=language)
+
+    # Найти пропущенные предложения
+    missing = []
+    for ref_sent in ref_sentences:
+        if all(ref_sent not in ext_sent for ext_sent in ext_sentences):
+            missing.append(ref_sent)
+
+    # Эмбеддинги
+    full_embed = get_embedding(reference_text)
+    extracted_embed = get_embedding(extracted_text)
+    original_similarity = cosine_similarity([full_embed], [extracted_embed])[0][0]
+
+    results = []
+
+    for sent in missing:
+        new_text = extracted_text + " " + sent
+        new_embed = get_embedding(new_text)
+        new_similarity = cosine_similarity([full_embed], [new_embed])[0][0]
+        gain = new_similarity - original_similarity
+
+        results.append({
+            "sentence": sent,
+            "semantic_gain": round(gain, 4)
+        })
+
+    # Сортируем по значимости
+    results.sort(key=lambda x: x['semantic_gain'], reverse=True)
+
+    return {
+        "semantic_similarity": round(original_similarity, 4),
+        "missing_fragments": results
+    }

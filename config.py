@@ -3,7 +3,7 @@ import os
 basedir = os.path.abspath((os.path.dirname(__file__)))
 
 class Config:
-    DATASETS_FOLDER=os.path.join(basedir,'datasets')
+    DATASETS_FOLDER=os.path.join(basedir,'data')
     HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                     'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -13,12 +13,7 @@ class Config:
         "llm": {
             "model": "owl/t-lite",#"ollama/llama3.2",
             # "model_tokens": 8192
-        },
-        "verbose": True,
-        "headless": True,
+        },"verbose": True,"headless": True,
     }
 
-config = {
-    
-    'default':Config
-}
+config = {'default':Config}

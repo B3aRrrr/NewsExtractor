@@ -1,24 +1,18 @@
-from scrapegraphai.graphs import SmartScraperGraph
+from utils.functions import *
 
-# Define the configuration for the scraping pipeline
-graph_config = {
-    "llm": {
-            "model": "owl/t-lite",#"ollama/llama3.2",
-            # "model_tokens": 8192
-        },
-    "verbose": True,
-    "headless": True,
+
+# Пример использования
+url = "https://ria.ru/20250512/dnr-2016505307.html"
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
 
-# Create the SmartScraperGraph instance
-smart_scraper_graph = SmartScraperGraph(
-    prompt="Extract full news content",
-    source="https://ria.ru/20250512/dnr-2016505307.html",
-    config=graph_config
-)
+result = extract_article(url, headers)
+if result:
+    print("=== Заголовок ===")
+    print(result['title'])
+    print("=== Язык ===")
+    print(result['language'])
+    print("=== Текст статьи ===")
+    print(result['text'])
 
-# Run the pipeline
-result = smart_scraper_graph.run()
-
-import json
-print(json.dumps(result, indent=4))

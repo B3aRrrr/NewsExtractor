@@ -2,3 +2,4 @@ venv
 scripts/*
 datasets
 NOT_USE
+newsscraper.py
