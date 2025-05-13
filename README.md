@@ -159,4 +159,8 @@ $$
 Pull Request'ы приветствуются!
 Если вы нашли баг — создайте issue.
 
+$$
+\frac{1}{2}
+$$
+
 Автор: [B3aRrrr](https://github.com/B3aRrrr)
