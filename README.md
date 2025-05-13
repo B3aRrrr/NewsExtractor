@@ -73,8 +73,9 @@ py main.py --excel_data_path path/to/input_file.xlsx
 ```
 
 На выходе появится файл `input_file_output.xlsx` c новыми колонками:
-- `gold_standard` 
-- `recall` 
+
+- `gold_standard`
+- `recall`
 - `loss_significance`
 
 ---
